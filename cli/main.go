@@ -2,6 +2,7 @@ package cli
 
 import (
 	"os"
+	"path"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -60,8 +61,10 @@ func initConfig(cmd *cobra.Command) error {
 			return err
 		}
 
-		viper.AddConfigPath(home)
-		viper.SetConfigName(".oaitool")
+		viper.AddConfigPath(path.Join(home, ".config", "oaitool"))
+		viper.AddConfigPath(path.Join(home, ".oaitool"))
+		viper.AddConfigPath(".oaitool")
+		viper.SetConfigName("config")
 	}
 
 	viper.SetEnvPrefix("oai")
@@ -73,6 +76,8 @@ func initConfig(cmd *cobra.Command) error {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return err
 		}
+	} else {
+		log.Debugf("using config file %s", viper.ConfigFileUsed())
 	}
 
 	return nil
@@ -91,11 +96,6 @@ func NewCmdRoot() *cobra.Command {
 				return err
 			}
 
-			token := viper.GetString("offline-token")
-
-			log.Debugf("using config file: %s\n", viper.ConfigFileUsed())
-			log.Debugf("found token: %s\n", token)
-
 			return nil
 		},
 	}
@@ -105,8 +105,10 @@ func NewCmdRoot() *cobra.Command {
 	cmd.PersistentFlags().StringP("access-token", "T", "", "api access token")
 	cmd.PersistentFlags().StringP("output-format", "o", "text", "select output format")
 	cmd.PersistentFlags().CountP("verbose", "v", "set logging verbosity")
+	cmd.PersistentFlags().StringP("api-url", "u", "https://api.openshift.com/api/assisted-install/v1", "set logging verbosity")
 
 	viper.BindPFlag("offline-token", cmd.PersistentFlags().Lookup("offline-token"))
+	viper.BindPFlag("api-url", cmd.PersistentFlags().Lookup("api-url"))
 
 	cmd.AddCommand(
 		NewCmdCluster(),

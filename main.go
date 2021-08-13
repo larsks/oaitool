@@ -14,9 +14,9 @@ func main() {
 		panic(err)
 	}
 
-	ssourl := "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
 	listclusterurl := "https://api.openshift.com/api/assisted-install/v1/clusters"
 
+	ssourl := "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
 	params := url.Values{}
 	params.Add("client_id", "cloud-services")
 	params.Add("grant_type", "refresh_token")
