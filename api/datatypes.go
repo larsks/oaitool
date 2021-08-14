@@ -228,4 +228,13 @@ type (
 		ProductName  string `json:"product_name"`
 		SerialNumber string `json:"serial_number"`
 	}
+
+	HostNameList struct {
+		HostNames []HostName `json:"hosts_names"`
+	}
+
+	HostName struct {
+		ID       string `json:"id"`
+		HostName string `json:"hostname"`
+	}
 )

@@ -41,6 +41,7 @@ func (client *ApiClient) NewRequest(method, url string, body io.Reader) (*http.R
 		return nil, err
 	}
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", client.AccessToken))
+	req.Header.Add("Content-type", "application/json")
 
 	return req, nil
 }
