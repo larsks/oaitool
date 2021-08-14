@@ -10,6 +10,91 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func getClusterFromFlags(ctx *Context, cmd *cobra.Command) (*api.ClusterDetail, error) {
+	clusterid, err := cmd.Flags().GetString("cluster")
+	if err != nil {
+		return nil, err
+	}
+
+	cluster, err := ctx.api.FindCluster(clusterid)
+	if err != nil {
+		return nil, err
+	}
+
+	return cluster, nil
+}
+
+func NewCmdHostShow(ctx *Context) *cobra.Command {
+	cmd := cobra.Command{
+		Use:           "show --cluster <cluster_name_or_id> <host_name_or_id>",
+		Short:         "List hosts in the given cluster",
+		SilenceErrors: true,
+		SilenceUsage:  true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cluster, err := getClusterFromFlags(ctx, cmd)
+			if err != nil {
+				return err
+			}
+			log.Debugf("found cluster %s", cluster.ID)
+
+			host, err := ctx.api.FindHost(cluster.ID, args[0])
+			if err != nil {
+				return err
+			}
+
+			inventory, err := host.GetInventory()
+			if err != nil {
+				return err
+			}
+
+			w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
+			fmt.Fprintf(w, "ID\t%s\n", host.ID)
+			fmt.Fprintf(w, "Manufacturer\t%s\n", inventory.SystemVendor.Manufacturer)
+			fmt.Fprintf(w, "Model\t%s\n", inventory.SystemVendor.ProductName)
+			fmt.Fprintf(w, "Serial\t%s\n", inventory.SystemVendor.SerialNumber)
+			fmt.Fprintf(w, "Role\t%s\n", host.Role)
+			fmt.Fprintf(w, "Status\t%s\n", host.Status)
+			fmt.Fprintf(w, "Stage\t%s\n", host.HostProgress.CurrentStage)
+			fmt.Fprintf(w, "BMC Address\t%s\n", inventory.BmcAddress)
+			fmt.Fprintf(w, "Architecture\t%s\n", inventory.CPU.Architecture)
+			fmt.Fprintf(w, "CPU Model\t%s\n", inventory.CPU.ModelName)
+			fmt.Fprintf(w, "Memory\t%d\n", inventory.Memory.PhysicalBytes/1024/1024/1024)
+			fmt.Fprintf(w, "Interfaces\n")
+			for _, iface := range inventory.Interfaces {
+				var speed string
+
+				if iface.SpeedMbps > 0 {
+					speed = fmt.Sprintf("%d", iface.SpeedMbps)
+				} else {
+					speed = "-"
+				}
+
+				fmt.Fprintf(w, "\t%s\t%s\t%s\n", iface.Name, iface.MacAddress, speed)
+			}
+
+			fmt.Fprintf(w, "Disks\n")
+			for _, disk := range inventory.Disks {
+				if !disk.Bootable {
+					continue
+				}
+
+				size := disk.SizeBytes / 1024 / 1024 / 1024
+				fmt.Fprintf(w, "\t%s\t%s\t%s\t%s\t%d\n",
+					disk.Name, disk.Serial, disk.Vendor, disk.Model, size)
+			}
+
+			w.Flush()
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringP("cluster", "c", "", "cluster id or name")
+	cmd.MarkFlagRequired("cluster")
+
+	return &cmd
+}
+
 func NewCmdHostList(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
 		Use:           "list --cluster <name_or_id>",
@@ -17,18 +102,11 @@ func NewCmdHostList(ctx *Context) *cobra.Command {
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clusterid, err := cmd.Flags().GetString("cluster")
+			cluster, err := getClusterFromFlags(ctx, cmd)
 			if err != nil {
 				return err
 			}
 
-			cluster, err := ctx.api.FindCluster(clusterid)
-			if err != nil {
-				return err
-			}
-			if cluster == nil {
-				return fmt.Errorf("unable to find cluster named \"%s\"", clusterid)
-			}
 			w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 			for _, host := range cluster.Hosts {
 				inventory, err := host.GetInventory()
@@ -68,17 +146,9 @@ func NewCmdHostSetName(ctx *Context) *cobra.Command {
 				return fmt.Errorf("wrong number of arguments")
 			}
 
-			clusterid, err := cmd.Flags().GetString("cluster")
+			cluster, err := getClusterFromFlags(ctx, cmd)
 			if err != nil {
 				return err
-			}
-
-			cluster, err := ctx.api.FindCluster(clusterid)
-			if err != nil {
-				return err
-			}
-			if cluster == nil {
-				return fmt.Errorf("unable to find cluster named \"%s\"", clusterid)
 			}
 
 			pos := 0
@@ -119,6 +189,7 @@ func NewCmdHost(ctx *Context) *cobra.Command {
 	cmd.AddCommand(
 		NewCmdHostList(ctx),
 		NewCmdHostSetName(ctx),
+		NewCmdHostShow(ctx),
 	)
 
 	return &cmd

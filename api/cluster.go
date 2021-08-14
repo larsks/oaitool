@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 )
 
 func (client *ApiClient) ListClusters() (ClusterList, error) {
@@ -33,8 +34,8 @@ func (client *ApiClient) ListClusters() (ClusterList, error) {
 // Find a cluster by id or name. First treat `name` as a cluster id
 // and attempt to fetch it directly. If that fails, get a list of
 // available clusters and look for the cluster name.
-func (client *ApiClient) FindCluster(name string) (*ClusterDetail, error) {
-	detail, err := client.GetCluster(name)
+func (client *ApiClient) FindCluster(clusterid string) (*ClusterDetail, error) {
+	detail, err := client.GetCluster(clusterid)
 	if err == nil {
 		return detail, nil
 	}
@@ -49,7 +50,7 @@ func (client *ApiClient) FindCluster(name string) (*ClusterDetail, error) {
 
 	var selected *Cluster
 	for _, cluster := range clusters {
-		if cluster.Name == name {
+		if cluster.Name == clusterid {
 			selected = &cluster
 			break
 		}
@@ -57,7 +58,7 @@ func (client *ApiClient) FindCluster(name string) (*ClusterDetail, error) {
 
 	// We didn't find anything
 	if selected == nil {
-		return nil, nil
+		return nil, fmt.Errorf("no cluster matching %s", clusterid)
 	}
 
 	// We found a cluster, let's try to get the cluster detail
@@ -69,17 +70,28 @@ func (client *ApiClient) FindCluster(name string) (*ClusterDetail, error) {
 	return detail, nil
 }
 
-func (client *ApiClient) GetCluster(id string) (*ClusterDetail, error) {
+func (client *ApiClient) GetCluster(clusterid string) (*ClusterDetail, error) {
 	var clusterDetail ClusterDetail
 
 	req, err := client.NewRequest(
 		"GET",
-		fmt.Sprintf("%s/clusters/%s", client.ApiUrl, id),
+		fmt.Sprintf("%s/clusters/%s", client.ApiUrl, clusterid),
 		nil,
 	)
 	resp, err := client.client.Do(req)
 	if err != nil {
 		return nil, err
+	}
+	if resp.StatusCode != 200 {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			body = []byte("unknown error")
+		}
+		return nil, fmt.Errorf(
+			"failed to get cluster %s: %s [%d]: %s",
+			clusterid,
+			http.StatusText(resp.StatusCode), resp.StatusCode, body,
+		)
 	}
 
 	body, err := io.ReadAll(resp.Body)

@@ -2,6 +2,7 @@ package api
 
 import "time"
 
+// Most of these structs were generated using https://mholt.github.io/json-to-go/
 type (
 	TokenResponse struct {
 		AccessToken       string `json:"access_token"`

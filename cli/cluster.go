@@ -59,10 +59,6 @@ func NewCmdClusterShow(ctx *Context) *cobra.Command {
 				return err
 			}
 
-			if cluster == nil {
-				return fmt.Errorf("unable to find cluster named \"%s\"", clusterid)
-			}
-
 			w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 			fmt.Fprintf(w, "Name\t%s\n", cluster.Name)
 			fmt.Fprintf(w, "BaseDNSDomain\t%s\n", cluster.BaseDNSDomain)

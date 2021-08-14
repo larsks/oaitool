@@ -17,6 +17,26 @@ func (host *Host) GetInventory() (*HostInventory, error) {
 	return &inventory, nil
 }
 
+func (client *ApiClient) FindHost(clusterid string, hostid string) (*Host, error) {
+	cluster, err := client.FindCluster(clusterid)
+	if err != nil {
+		return nil, err
+	}
+
+	host, err := client.GetHost(cluster.ID, hostid)
+	if err == nil {
+		return host, nil
+	}
+
+	for _, host := range cluster.Hosts {
+		if host.RequestedHostname == hostid {
+			return &host, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no host matching %s", hostid)
+}
+
 func (client *ApiClient) SetHostnames(clusterid string, hostnames []HostName) error {
 	var hnl HostNameList
 	for _, hostname := range hostnames {
@@ -54,4 +74,39 @@ func (client *ApiClient) SetHostnames(clusterid string, hostnames []HostName) er
 	}
 
 	return nil
+}
+
+func (client *ApiClient) GetHost(clusterid, hostid string) (*Host, error) {
+	var host Host
+
+	req, err := client.NewRequest(
+		"GET",
+		fmt.Sprintf("%s/clusters/%s/hosts/%s", client.ApiUrl, clusterid, hostid),
+		nil,
+	)
+	resp, err := client.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != 200 {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			body = []byte("unknown error")
+		}
+		return nil, fmt.Errorf(
+			"failed to get host %s: %s [%d]: %s",
+			hostid,
+			http.StatusText(resp.StatusCode), resp.StatusCode, body,
+		)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(body, &host); err != nil {
+		return nil, err
+	}
+
+	return &host, nil
 }
