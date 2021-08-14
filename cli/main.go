@@ -1,17 +1,25 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"strings"
 
+	"github.com/larsks/oaitool/api"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-func configureLogging(cmd *cobra.Command) error {
+type (
+	Context struct {
+		api *api.ApiClient
+	}
+)
+
+func initLogging(cmd *cobra.Command) error {
 	var loglevel log.Level
 
 	verbose, err := cmd.Flags().GetCount("verbose")
@@ -83,16 +91,36 @@ func initConfig(cmd *cobra.Command) error {
 	return nil
 }
 
+func initContext(cmd *cobra.Command, ctx *Context) error {
+	offlinetoken := viper.GetString("offline-token")
+	apiurl := viper.GetString("api-url")
+
+	apiclient := api.NewApiClient(offlinetoken, apiurl)
+	if apiclient == nil {
+		return fmt.Errorf("failed to create api client")
+	}
+
+	ctx.api = apiclient
+
+	return nil
+}
+
 func NewCmdRoot() *cobra.Command {
+	ctx := &Context{}
+
 	cmd := cobra.Command{
 		Use:   "oai",
 		Short: "A tool for interacting with the OpenShift Assisted Installer API",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if err := configureLogging(cmd); err != nil {
+			if err := initLogging(cmd); err != nil {
 				return err
 			}
 
 			if err := initConfig(cmd); err != nil {
+				return err
+			}
+
+			if err := initContext(cmd, ctx); err != nil {
 				return err
 			}
 
@@ -102,8 +130,6 @@ func NewCmdRoot() *cobra.Command {
 
 	cmd.PersistentFlags().StringP("config-file", "f", "", "path to config file")
 	cmd.PersistentFlags().StringP("offline-token", "t", "", "offline api token")
-	cmd.PersistentFlags().StringP("access-token", "T", "", "api access token")
-	cmd.PersistentFlags().StringP("output-format", "o", "text", "select output format")
 	cmd.PersistentFlags().CountP("verbose", "v", "set logging verbosity")
 	cmd.PersistentFlags().StringP("api-url", "u", "https://api.openshift.com/api/assisted-install/v1", "set logging verbosity")
 
@@ -111,7 +137,8 @@ func NewCmdRoot() *cobra.Command {
 	viper.BindPFlag("api-url", cmd.PersistentFlags().Lookup("api-url"))
 
 	cmd.AddCommand(
-		NewCmdCluster(),
+		NewCmdCluster(ctx),
+		NewCmdHost(ctx),
 	)
 
 	return &cmd

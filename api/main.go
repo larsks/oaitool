@@ -45,31 +45,6 @@ func (client *ApiClient) NewRequest(method, url string, body io.Reader) (*http.R
 	return req, nil
 }
 
-func (client *ApiClient) ListClusters() (ClusterList, error) {
-	var clusters ClusterList
-
-	req, err := client.NewRequest(
-		"GET",
-		fmt.Sprintf("%s/clusters", client.ApiUrl),
-		nil,
-	)
-	resp, err := client.client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Debugf("status: %d\n", resp.StatusCode)
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	if err := json.Unmarshal(body, &clusters); err != nil {
-		return nil, err
-	}
-
-	return clusters, nil
-}
-
 func (client *ApiClient) GetAccessToken(offlinetoken string) error {
 	var response TokenResponse
 
