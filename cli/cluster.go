@@ -25,10 +25,11 @@ func NewCmdClusterList(ctx *Context) *cobra.Command {
 			for _, cluster := range clusters {
 				fmt.Fprintf(
 					w,
-					"%s\t%s\t%s\n",
+					"%s\t%s\t%s\t%s\n",
 					cluster.Name,
 					cluster.BaseDNSDomain,
 					cluster.ID,
+					cluster.Status,
 				)
 			}
 			w.Flush()

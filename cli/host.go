@@ -38,9 +38,9 @@ func NewCmdHostList(ctx *Context) *cobra.Command {
 
 				fmt.Fprintf(
 					w,
-					"%s\t%s\t%s\t%s\n",
+					"%s\t%s\t%s\t%s\t%s\n",
 					host.ID, host.RequestedHostname, host.Role,
-					inventory.BmcAddress,
+					inventory.BmcAddress, host.Status,
 				)
 			}
 			w.Flush()
