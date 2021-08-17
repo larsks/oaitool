@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/larsks/oaitool/api"
@@ -69,7 +70,8 @@ func NewCmdHostShow(ctx *Context) *cobra.Command {
 					speed = "-"
 				}
 
-				fmt.Fprintf(w, "\t%s\t%s\t%s\n", iface.Name, iface.MacAddress, speed)
+				addresses := strings.Join(iface.Ipv4Addresses, " ")
+				fmt.Fprintf(w, "\t%s\t%s\t%s\t%s\n", iface.Name, iface.MacAddress, speed, addresses)
 			}
 
 			fmt.Fprintf(w, "Disks\n")
