@@ -17,6 +17,31 @@ func (host *Host) GetInventory() (*HostInventory, error) {
 	return &inventory, nil
 }
 
+func (client *ApiClient) DeleteHost(clusterid string, hostid string) error {
+	req, err := client.NewRequest(
+		"DELETE",
+		fmt.Sprintf("%s/clusters/%s/hosts/%s", client.ApiUrl, clusterid, hostid),
+		nil,
+	)
+	resp, err := client.client.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 204 {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			body = []byte("unknown error")
+		}
+		return fmt.Errorf(
+			"failed to delete host %s: %s [%d]: %s",
+			hostid,
+			http.StatusText(resp.StatusCode), resp.StatusCode, body,
+		)
+	}
+
+	return nil
+}
+
 func (client *ApiClient) FindHost(clusterid string, hostid string) (*Host, error) {
 	cluster, err := client.FindCluster(clusterid)
 	if err != nil {

@@ -71,7 +71,9 @@ func NewCmdHostShow(ctx *Context) *cobra.Command {
 				}
 
 				addresses := strings.Join(iface.Ipv4Addresses, " ")
-				fmt.Fprintf(w, "\t%s\t%s\t%s\t%s\n", iface.Name, iface.MacAddress, speed, addresses)
+				fmt.Fprintf(w,
+					"\t%s\t%s\t%d\t%s\t%s\n",
+					iface.Name, iface.MacAddress, iface.Mtu, speed, addresses)
 			}
 
 			fmt.Fprintf(w, "Disks\n")
@@ -124,6 +126,44 @@ func NewCmdHostList(ctx *Context) *cobra.Command {
 				)
 			}
 			w.Flush()
+			return nil
+		},
+	}
+
+	cmd.Flags().StringP("cluster", "c", "", "cluster id or name")
+	cmd.MarkFlagRequired("cluster")
+
+	return &cmd
+}
+
+func NewCmdHostDelete(ctx *Context) *cobra.Command {
+	cmd := cobra.Command{
+		Use:           "delete --cluster <cluster_id> <host_id_orname> [...]",
+		Short:         "Delete hosts from cluster",
+		SilenceErrors: true,
+		SilenceUsage:  true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				return fmt.Errorf("no hostnames provided")
+			}
+
+			cluster, err := getClusterFromFlags(ctx, cmd)
+			if err != nil {
+				return err
+			}
+
+			for _, name := range args {
+				host, err := ctx.api.FindHost(cluster.ID, name)
+				if err != nil {
+					return err
+				}
+
+				log.Infof("deleting host %s (%s)", name, host.ID)
+				if err := ctx.api.DeleteHost(cluster.ID, host.ID); err != nil {
+					return err
+				}
+			}
+
 			return nil
 		},
 	}
@@ -192,6 +232,7 @@ func NewCmdHost(ctx *Context) *cobra.Command {
 		NewCmdHostList(ctx),
 		NewCmdHostSetName(ctx),
 		NewCmdHostShow(ctx),
+		NewCmdHostDelete(ctx),
 	)
 
 	return &cmd
