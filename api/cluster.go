@@ -104,3 +104,107 @@ func (client *ApiClient) GetCluster(clusterid string) (*ClusterDetail, error) {
 
 	return &clusterDetail, nil
 }
+
+func (client *ApiClient) InstallCluster(clusterid string) error {
+	req, err := client.NewRequest(
+		"POST",
+		fmt.Sprintf("%s/clusters/%s/actions/install", client.ApiUrl, clusterid),
+		nil,
+	)
+	resp, err := client.client.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 202 {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			body = []byte("unknown error")
+		}
+		return fmt.Errorf(
+			"failed to install cluster %s: %s [%d]: %s",
+			clusterid,
+			http.StatusText(resp.StatusCode), resp.StatusCode, body,
+		)
+	}
+
+	return nil
+
+}
+
+func (client *ApiClient) CancelCluster(clusterid string) error {
+	req, err := client.NewRequest(
+		"POST",
+		fmt.Sprintf("%s/clusters/%s/actions/cancel", client.ApiUrl, clusterid),
+		nil,
+	)
+	resp, err := client.client.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 202 {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			body = []byte("unknown error")
+		}
+		return fmt.Errorf(
+			"failed to install cluster %s: %s [%d]: %s",
+			clusterid,
+			http.StatusText(resp.StatusCode), resp.StatusCode, body,
+		)
+	}
+
+	return nil
+
+}
+
+func (client *ApiClient) ResetCluster(clusterid string) error {
+	req, err := client.NewRequest(
+		"POST",
+		fmt.Sprintf("%s/clusters/%s/actions/reset", client.ApiUrl, clusterid),
+		nil,
+	)
+	resp, err := client.client.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 202 {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			body = []byte("unknown error")
+		}
+		return fmt.Errorf(
+			"failed to install cluster %s: %s [%d]: %s",
+			clusterid,
+			http.StatusText(resp.StatusCode), resp.StatusCode, body,
+		)
+	}
+
+	return nil
+
+}
+
+func (client *ApiClient) DeleteCluster(clusterid string) error {
+	req, err := client.NewRequest(
+		"DELETE",
+		fmt.Sprintf("%s/clusters/%s", client.ApiUrl, clusterid),
+		nil,
+	)
+	resp, err := client.client.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 204 {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			body = []byte("unknown error")
+		}
+		return fmt.Errorf(
+			"failed to install cluster %s: %s [%d]: %s",
+			clusterid,
+			http.StatusText(resp.StatusCode), resp.StatusCode, body,
+		)
+	}
+
+	return nil
+
+}

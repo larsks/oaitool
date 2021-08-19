@@ -41,6 +41,95 @@ func NewCmdClusterList(ctx *Context) *cobra.Command {
 	return &cmd
 }
 
+func NewCmdClusterInstall(ctx *Context) *cobra.Command {
+	cmd := cobra.Command{
+		Use:           "install <name_or_id>",
+		Short:         "Manage cluster install",
+		SilenceErrors: true,
+		SilenceUsage:  true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 1 {
+				return fmt.Errorf("missing cluster name or id")
+			}
+
+			clusterid := args[0]
+			log.Debugf("look up cluster %s", clusterid)
+			cluster, err := ctx.api.FindCluster(clusterid)
+			if err != nil {
+				return err
+			}
+
+			action := false
+			for _, mode := range []string{"start", "cancel", "reset"} {
+				flagval, err := cmd.Flags().GetBool(mode)
+				if err != nil {
+					return err
+				}
+
+				switch {
+				case mode == "start" && flagval:
+					log.Infof("starting install of cluster %s (%s)", clusterid, cluster.ID)
+					err = ctx.api.InstallCluster(cluster.ID)
+					action = true
+				case mode == "cancel" && flagval:
+					log.Infof("starting install of cluster %s (%s)", clusterid, cluster.ID)
+					err = ctx.api.CancelCluster(cluster.ID)
+					action = true
+				case mode == "reset" && flagval:
+					log.Infof("starting install of cluster %s (%s)", clusterid, cluster.ID)
+					err = ctx.api.ResetCluster(cluster.ID)
+					action = true
+				}
+			}
+
+			if err != nil {
+				return err
+			}
+
+			if !action {
+				log.Warnf("no action specified")
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().Bool("start", false, "path to config file")
+	cmd.Flags().Bool("cancel", false, "path to config file")
+	cmd.Flags().Bool("reset", false, "path to config file")
+
+	return &cmd
+}
+
+func NewCmdClusterDelete(ctx *Context) *cobra.Command {
+	cmd := cobra.Command{
+		Use:           "delete <name_or_id>",
+		Short:         "Delete the specified cluster",
+		SilenceErrors: true,
+		SilenceUsage:  true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 1 {
+				return fmt.Errorf("missing cluster name or id")
+			}
+
+			clusterid := args[0]
+			log.Debugf("look up cluster %s", clusterid)
+			cluster, err := ctx.api.FindCluster(clusterid)
+			if err != nil {
+				return err
+			}
+
+			if err := ctx.api.DeleteCluster(cluster.ID); err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+
+	return &cmd
+}
+
 func NewCmdClusterShow(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
 		Use:           "show <name_or_id>",
@@ -86,6 +175,8 @@ func NewCmdCluster(ctx *Context) *cobra.Command {
 	cmd.AddCommand(
 		NewCmdClusterList(ctx),
 		NewCmdClusterShow(ctx),
+		NewCmdClusterDelete(ctx),
+		NewCmdClusterInstall(ctx),
 	)
 
 	return &cmd

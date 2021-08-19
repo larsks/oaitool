@@ -73,8 +73,6 @@ func (client *ApiClient) SetHostnames(clusterid string, hostnames []HostName) er
 		return err
 	}
 
-	fmt.Println(string(hnljson))
-
 	req, err := client.NewRequest(
 		"PATCH",
 		fmt.Sprintf("%s/clusters/%s", client.ApiUrl, clusterid),
@@ -87,13 +85,13 @@ func (client *ApiClient) SetHostnames(clusterid string, hostnames []HostName) er
 
 	// XXX: We should factor response error handling into a common
 	// function.
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != 201 {
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			body = []byte("unknown error")
 		}
 		return fmt.Errorf(
-			"failed to acquire token: %s [%d]: %s",
+			"failed to set hostname: %s [%d]: %s",
 			http.StatusText(resp.StatusCode), resp.StatusCode, body,
 		)
 	}
