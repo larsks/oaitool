@@ -29,6 +29,7 @@ func NewCmdHostShow(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
 		Use:           "show --cluster <cluster_name_or_id> <host_name_or_id>",
 		Short:         "Show details for a single host",
+		Args:          cobra.ExactArgs(1),
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -120,6 +121,7 @@ func NewCmdHostList(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
 		Use:           "list --cluster <name_or_id>",
 		Short:         "List hosts in the given cluster",
+		Args:          cobra.NoArgs,
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -293,8 +295,9 @@ func findHostByProduct(hosts []api.Host, value string) []api.Host {
 
 func NewCmdHostFind(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
-		Use:           "find --cluster <cluster_id>",
+		Use:           "find --cluster <cluster_id> -m name=value [-m ...]",
 		Short:         "Find hosts matching criteria",
+		Args:          cobra.NoArgs,
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {

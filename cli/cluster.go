@@ -13,6 +13,7 @@ func NewCmdClusterList(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
 		Use:           "list",
 		Short:         "List available clusters",
+		Args:          cobra.NoArgs,
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -43,8 +44,9 @@ func NewCmdClusterList(ctx *Context) *cobra.Command {
 
 func NewCmdClusterInstall(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
-		Use:           "install <name_or_id>",
+		Use:           "install <name_or_id> (--start | --cancel | --reset )",
 		Short:         "Manage cluster install",
+		Args:          cobra.ExactArgs(1),
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -105,6 +107,7 @@ func NewCmdClusterDelete(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
 		Use:           "delete <name_or_id>",
 		Short:         "Delete the specified cluster",
+		Args:          cobra.ExactArgs(1),
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -134,6 +137,7 @@ func NewCmdClusterShow(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
 		Use:           "show <name_or_id>",
 		Short:         "Show details for a single cluster",
+		Args:          cobra.ExactArgs(1),
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
