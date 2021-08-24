@@ -341,9 +341,9 @@ func NewCmdHostFind(ctx *Context) *cobra.Command {
 
 func NewCmdHostWaitForStatus(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
-		Use:           "wait-for-status [--hosts <count>] [--interval <seconds>] [--retries <retries>] [--timeout <seconds>] <status> [<host> [...]]",
+		Use:           "wait-for-status [--hosts <count>] [--interval <seconds>] [--retries <retries>] [--timeout <seconds>] <status>",
 		Short:         "Wait until hosts in cluster reach the named status",
-		Args:          cobra.MinimumNArgs(1),
+		Args:          cobra.ExactArgs(1),
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -352,21 +352,12 @@ func NewCmdHostWaitForStatus(ctx *Context) *cobra.Command {
 				return err
 			}
 
-			var hosts []string
-			if len(args) > 1 {
-				hosts = args[1:]
-			} else {
-				for _, host := range cluster.Hosts {
-					hosts = append(hosts, host.ID)
-				}
-			}
-
 			hostcount, err := cmd.Flags().GetInt("hosts")
 			if err != nil {
 				return err
 			}
 			if hostcount == 0 {
-				hostcount = len(hosts)
+				hostcount = len(cluster.Hosts)
 			}
 
 			retries, err := cmd.Flags().GetInt("retries")
@@ -385,22 +376,21 @@ func NewCmdHostWaitForStatus(ctx *Context) *cobra.Command {
 			}
 
 			desired_status := args[0]
-			if !api.ValidateClusterStatus(desired_status) {
+			if !api.ValidateHostStatus(desired_status) {
 				return fmt.Errorf("invalid status")
 			}
+
+			log.Infof("waiting for %d hosts in cluster %s to reach status %s",
+				hostcount, cluster.Name, desired_status)
 
 			retry_count := 0
 			time_start := time.Now()
 			for {
 				hosts_with_status := 0
-				for _, hostid := range hosts {
-					log.Debugf("checking status for %s, have %s want %s",
-						hostid, cluster.Status, desired_status)
 
-					host, err := ctx.api.FindHost(cluster.ID, hostid)
-					if err != nil {
-						return err
-					}
+				for _, host := range cluster.Hosts {
+					log.Debugf("checking status for %s, have %s want %s",
+						host.ID, host.Status, desired_status)
 
 					if host.Status == desired_status {
 						hosts_with_status++
@@ -421,6 +411,10 @@ func NewCmdHostWaitForStatus(ctx *Context) *cobra.Command {
 				}
 
 				time.Sleep(time.Duration(interval) * time.Second)
+				cluster, err = getClusterFromFlags(ctx, cmd)
+				if err != nil {
+					return err
+				}
 			}
 
 			return nil

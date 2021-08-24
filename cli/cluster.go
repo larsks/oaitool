@@ -486,6 +486,9 @@ func NewCmdClusterWaitForStatus(ctx *Context) *cobra.Command {
 				return fmt.Errorf("invalid status")
 			}
 
+			log.Infof("waiting for cluster %s to reach status %s",
+				cluster.Name, desired_status)
+
 			retry_count := 0
 			time_start := time.Now()
 			for {
