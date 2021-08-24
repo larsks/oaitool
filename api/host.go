@@ -43,14 +43,14 @@ func (client *ApiClient) DeleteHost(clusterid string, hostid string) error {
 }
 
 func (client *ApiClient) FindHost(clusterid string, hostid string) (*Host, error) {
+	host, err := client.GetHost(clusterid, hostid)
+	if err == nil {
+		return host, nil
+	}
+
 	cluster, err := client.FindCluster(clusterid)
 	if err != nil {
 		return nil, err
-	}
-
-	host, err := client.GetHost(cluster.ID, hostid)
-	if err == nil {
-		return host, nil
 	}
 
 	for _, host := range cluster.Hosts {

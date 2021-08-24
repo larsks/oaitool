@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"text/tabwriter"
+	"time"
 
 	"github.com/larsks/oaitool/api"
 	log "github.com/sirupsen/logrus"
@@ -338,6 +339,102 @@ func NewCmdHostFind(ctx *Context) *cobra.Command {
 	return &cmd
 }
 
+func NewCmdHostWaitForStatus(ctx *Context) *cobra.Command {
+	cmd := cobra.Command{
+		Use:           "wait-for-status [--hosts <count>] [--interval <seconds>] [--retries <retries>] [--timeout <seconds>] <status> [<host> [...]]",
+		Short:         "Wait until hosts in cluster reach the named status",
+		Args:          cobra.MinimumNArgs(1),
+		SilenceErrors: true,
+		SilenceUsage:  true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cluster, err := getClusterFromFlags(ctx, cmd)
+			if err != nil {
+				return err
+			}
+
+			var hosts []string
+			if len(args) > 1 {
+				hosts = args[1:]
+			} else {
+				for _, host := range cluster.Hosts {
+					hosts = append(hosts, host.ID)
+				}
+			}
+
+			hostcount, err := cmd.Flags().GetInt("hosts")
+			if err != nil {
+				return err
+			}
+			if hostcount == 0 {
+				hostcount = len(hosts)
+			}
+
+			retries, err := cmd.Flags().GetInt("retries")
+			if err != nil {
+				return err
+			}
+
+			interval, err := cmd.Flags().GetInt("interval")
+			if err != nil {
+				return err
+			}
+
+			timeout, err := cmd.Flags().GetInt("timeout")
+			if err != nil {
+				return err
+			}
+
+			desired_status := args[0]
+			if !api.ValidateClusterStatus(desired_status) {
+				return fmt.Errorf("invalid status")
+			}
+
+			retry_count := 0
+			time_start := time.Now()
+			for {
+				hosts_with_status := 0
+				for _, hostid := range hosts {
+					log.Debugf("checking status for %s, have %s want %s",
+						hostid, cluster.Status, desired_status)
+
+					host, err := ctx.api.FindHost(cluster.ID, hostid)
+					if err != nil {
+						return err
+					}
+
+					if host.Status == desired_status {
+						hosts_with_status++
+					}
+				}
+
+				if hosts_with_status == hostcount {
+					break
+				}
+
+				if timeout > 0 && time.Since(time_start).Seconds() > float64(timeout) {
+					return fmt.Errorf("timed out waiting for status")
+				}
+
+				retry_count++
+				if retries > 0 && retry_count > retries {
+					return fmt.Errorf("too many retries waiting for status")
+				}
+
+				time.Sleep(time.Duration(interval) * time.Second)
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().Int("retries", 0, "Number of times to check status")
+	cmd.Flags().Int("interval", 5, "Number of seconds to sleep between retries")
+	cmd.Flags().Int("timeout", 0, "Number of seconds after which we timeout")
+	cmd.Flags().Int("hosts", 0, "Wait until this many hosts achieve target status")
+
+	return &cmd
+}
+
 func NewCmdHost(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
 		Use:   "host",
@@ -353,6 +450,7 @@ func NewCmdHost(ctx *Context) *cobra.Command {
 		NewCmdHostShow(ctx),
 		NewCmdHostDelete(ctx),
 		NewCmdHostFind(ctx),
+		NewCmdHostWaitForStatus(ctx),
 	)
 
 	return &cmd

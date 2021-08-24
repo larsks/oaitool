@@ -455,7 +455,7 @@ func NewCmdClusterGetFile(ctx *Context) *cobra.Command {
 
 func NewCmdClusterWaitForStatus(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
-		Use:           "wait-for-status <status>",
+		Use:           "wait-for-status [--interval <seconds>] [--retries <retries>] [--timeout <seconds>] <status>",
 		Short:         "Wait until cluster reaches the named status",
 		Args:          cobra.ExactArgs(1),
 		SilenceErrors: true,

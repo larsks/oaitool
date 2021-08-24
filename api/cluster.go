@@ -48,6 +48,33 @@ var supportedClusterStatus = []string{
 	"installing-pending-user-action",
 }
 
+var supportedHostStatus = []string{
+	"discovering",
+	"known",
+	"disconnected",
+	"insufficient",
+	"disabled",
+	"preparing-for-installation",
+	"preparing-successful",
+	"pending-for-input",
+	"installing",
+	"installing-in-progress",
+	"installing-pending-user-action",
+	"resetting-pending-user-action",
+	"installed",
+	"error",
+	"resetting",
+	"added-to-existing-cluster",
+	"cancelled",
+	"binding",
+	"unbinding",
+	"known-unbound",
+	"disconnected-unbound",
+	"insufficient-unbound",
+	"disabled-unbound",
+	"discovering-unbound",
+}
+
 func valInList(value string, allowed_values []string) bool {
 	for _, this := range allowed_values {
 		if this == value {
@@ -56,6 +83,10 @@ func valInList(value string, allowed_values []string) bool {
 	}
 
 	return false
+}
+
+func ValidateHostStatus(status string) bool {
+	return valInList(status, supportedHostStatus)
 }
 
 func ValidateClusterStatus(status string) bool {
