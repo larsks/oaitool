@@ -19,6 +19,23 @@ type (
 	}
 )
 
+func getClusterFromFlags(ctx *Context, cmd *cobra.Command) (*api.Cluster, error) {
+	clusterid, err := cmd.Flags().GetString("cluster")
+	if err != nil {
+		return nil, err
+	}
+	if clusterid == "" {
+		return nil, fmt.Errorf("no cluster name provided")
+	}
+
+	cluster, err := ctx.api.FindCluster(clusterid)
+	if err != nil {
+		return nil, err
+	}
+
+	return cluster, nil
+}
+
 func initLogging(cmd *cobra.Command) error {
 	var loglevel log.Level
 

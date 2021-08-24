@@ -153,13 +153,13 @@ func NewCmdClusterCreate(ctx *Context) *cobra.Command {
 
 func NewCmdClusterSetVips(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
-		Use:           "set-vips --api-vip a.b.c.d --ingress-vip w.x.y.z <name_or_id>",
+		Use:           "set-vips --api-vip a.b.c.d --ingress-vip w.x.y.z",
 		Short:         "Create an assisted installer cluster",
-		Args:          cobra.ExactArgs(1),
+		Args:          cobra.NoArgs,
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cluster, err := getClusterFromArgs(ctx, args)
+			cluster, err := getClusterFromFlags(ctx, cmd)
 			if err != nil {
 				return err
 			}
@@ -202,13 +202,13 @@ func NewCmdClusterSetVips(ctx *Context) *cobra.Command {
 
 func NewCmdClusterInstall(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
-		Use:           "install <name_or_id> (--start | --cancel | --reset )",
+		Use:           "install (--start | --cancel | --reset )",
 		Short:         "Manage cluster install",
-		Args:          cobra.ExactArgs(1),
+		Args:          cobra.NoArgs,
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cluster, err := getClusterFromArgs(ctx, args)
+			cluster, err := getClusterFromFlags(ctx, cmd)
 			if err != nil {
 				return err
 			}
@@ -233,6 +233,8 @@ func NewCmdClusterInstall(ctx *Context) *cobra.Command {
 					log.Infof("starting install of cluster %s (%s)", cluster.Name, cluster.ID)
 					err = ctx.api.ResetCluster(cluster.ID)
 					action = true
+				default:
+					err = fmt.Errorf("invalid command: %s", mode)
 				}
 			}
 
@@ -257,13 +259,13 @@ func NewCmdClusterInstall(ctx *Context) *cobra.Command {
 
 func NewCmdClusterDelete(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
-		Use:           "delete <name_or_id>",
+		Use:           "delete",
 		Short:         "Delete the specified cluster",
-		Args:          cobra.ExactArgs(1),
+		Args:          cobra.NoArgs,
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cluster, err := getClusterFromArgs(ctx, args)
+			cluster, err := getClusterFromFlags(ctx, cmd)
 			if err != nil {
 				return err
 			}
@@ -281,13 +283,13 @@ func NewCmdClusterDelete(ctx *Context) *cobra.Command {
 
 func NewCmdClusterShow(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
-		Use:           "show <name_or_id>",
+		Use:           "show",
 		Short:         "Show details for a single cluster",
-		Args:          cobra.ExactArgs(1),
+		Args:          cobra.NoArgs,
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cluster, err := getClusterFromArgs(ctx, args)
+			cluster, err := getClusterFromFlags(ctx, cmd)
 			if err != nil {
 				return err
 			}
@@ -329,13 +331,13 @@ func NewCmdClusterShow(ctx *Context) *cobra.Command {
 
 func NewCmdClusterStatus(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
-		Use:           "status <name_or_id>",
+		Use:           "status",
 		Short:         "Get cluster status",
-		Args:          cobra.ExactArgs(1),
+		Args:          cobra.NoArgs,
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cluster, err := getClusterFromArgs(ctx, args)
+			cluster, err := getClusterFromFlags(ctx, cmd)
 			if err != nil {
 				return err
 			}
@@ -350,13 +352,13 @@ func NewCmdClusterStatus(ctx *Context) *cobra.Command {
 
 func NewCmdClusterGetImageUrl(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
-		Use:           "get-image-url <name_or_id>",
+		Use:           "get-image-url",
 		Short:         "Get discovery image download url",
-		Args:          cobra.ExactArgs(1),
+		Args:          cobra.NoArgs,
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cluster, err := getClusterFromArgs(ctx, args)
+			cluster, err := getClusterFromFlags(ctx, cmd)
 			if err != nil {
 				return err
 			}
@@ -375,6 +377,10 @@ func NewCmdClusterGetImageUrl(ctx *Context) *cobra.Command {
 				if err != nil {
 					return err
 				}
+
+				if cluster.ImageInfo.DownloadUrl == "" {
+					return fmt.Errorf("failed to retrieve discovery image url")
+				}
 			}
 
 			log.Debugf("image info: %+v", cluster.ImageInfo)
@@ -383,7 +389,7 @@ func NewCmdClusterGetImageUrl(ctx *Context) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringP("image-type", "T", "minimal-iso", "set discovery image type")
+	cmd.Flags().String("image-type", "minimal-iso", "set discovery image type")
 
 	return &cmd
 }
@@ -392,11 +398,11 @@ func NewCmdClusterGetKubeconfig(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
 		Use:           "get-kubeconfig <name_or_id>",
 		Short:         "Get cluster kubeconfig",
-		Args:          cobra.ExactArgs(1),
+		Args:          cobra.NoArgs,
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cluster, err := getClusterFromArgs(ctx, args)
+			cluster, err := getClusterFromFlags(ctx, cmd)
 			if err != nil {
 				return err
 			}
@@ -417,22 +423,22 @@ func NewCmdClusterGetKubeconfig(ctx *Context) *cobra.Command {
 
 func NewCmdClusterGetFile(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
-		Use:           "get-file <name_or_id>",
+		Use:           "get-file <filename>",
 		Short:         "Get file from cluster",
-		Args:          cobra.ExactArgs(2),
+		Args:          cobra.ExactArgs(1),
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cluster, err := getClusterFromArgs(ctx, args)
+			cluster, err := getClusterFromFlags(ctx, cmd)
 			if err != nil {
 				return err
 			}
 
-			if !api.ValidateDownloadFile(args[1]) {
+			if !api.ValidateDownloadFile(args[0]) {
 				return fmt.Errorf("invalid filename")
 			}
 
-			content, err := ctx.api.GetFile(cluster.ID, args[1])
+			content, err := ctx.api.GetFile(cluster.ID, args[0])
 			if err != nil {
 				return err
 			}
@@ -451,6 +457,8 @@ func NewCmdCluster(ctx *Context) *cobra.Command {
 		Use:   "cluster",
 		Short: "Commands for interacting with clusters",
 	}
+
+	cmd.PersistentFlags().String("cluster", "", "cluster id or name")
 
 	cmd.AddCommand(
 		NewCmdClusterList(ctx),

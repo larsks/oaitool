@@ -11,20 +11,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func getClusterFromFlags(ctx *Context, cmd *cobra.Command) (*api.Cluster, error) {
-	clusterid, err := cmd.Flags().GetString("cluster")
-	if err != nil {
-		return nil, err
-	}
-
-	cluster, err := ctx.api.FindCluster(clusterid)
-	if err != nil {
-		return nil, err
-	}
-
-	return cluster, nil
-}
-
 func NewCmdHostShow(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
 		Use:           "show --cluster <cluster_name_or_id> <host_name_or_id>",
@@ -358,7 +344,7 @@ func NewCmdHost(ctx *Context) *cobra.Command {
 		Short: "Commands for interacting with hosts in a cluster",
 	}
 
-	cmd.PersistentFlags().StringP("cluster", "c", "", "cluster id or name")
+	cmd.PersistentFlags().String("cluster", "", "cluster id or name")
 	cmd.MarkFlagRequired("cluster")
 
 	cmd.AddCommand(
