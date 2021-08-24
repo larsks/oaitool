@@ -328,7 +328,7 @@ func NewCmdHostFind(ctx *Context) *cobra.Command {
 				switch name {
 				case "mac":
 					selected = findHostByMac(selected, value)
-				case "bmc_address":
+				case "bmc_address", "bmc-address":
 					selected = findHostByBmcAddress(selected, value)
 				case "vendor":
 					selected = findHostByVendor(selected, value)

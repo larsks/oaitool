@@ -129,14 +129,6 @@ type (
 		ValidationsInfo       string    `json:"validations_info"`
 		Bootstrap             bool      `json:"bootstrap,omitempty"`
 	}
-	ImageInfo struct {
-		CreatedAt    time.Time `json:"created_at"`
-		DownloadURL  string    `json:"download_url"`
-		ExpiresAt    time.Time `json:"expires_at"`
-		SizeBytes    int       `json:"size_bytes"`
-		SSHPublicKey string    `json:"ssh_public_key"`
-		Type         string    `json:"type"`
-	}
 	MonitoredOperators struct {
 		ClusterID       string    `json:"cluster_id"`
 		Name            string    `json:"name"`
@@ -237,5 +229,65 @@ type (
 	HostName struct {
 		ID       string `json:"id"`
 		HostName string `json:"hostname"`
+	}
+
+	ClusterInstallParams struct {
+		Name                 string `json:"name"`
+		OpenshiftVersion     string `json:"openshift_version"`
+		PullSecret           string `json:"pull_secret"`
+		HighAvailabilityMode string `json:"high_availability_mode"`
+		OCPReleaseImage      string `json:"ocp_release_image"`
+	}
+
+	ClusterCreateParams struct {
+		// Required
+		Name             string `json:"name"`
+		OpenshiftVersion string `json:"openshift_version"`
+		PullSecret       string `json:"pull_secret"`
+
+		// Optional
+		HighAvailabilityMode     string `json:"high_availability_mode,omitempty"`
+		OcpReleaseImage          string `json:"ocp_release_image,omitempty"`
+		BaseDnsDomain            string `json:"base_dns_domain,omitempty"`
+		ClusterNetworkCidr       string `json:"cluster_network_cidr,omitempty"`
+		ClusterNetworkHostPrefix int    `json:"cluster_network_host_prefix,omitempty"`
+		ServiceNetworkCidr       string `json:"service_network_cidr,omitempty"`
+		ApiVip                   string `json:"api_vip,omitempty"`
+		IngressVip               string `json:"ingress_vip,omitempty"`
+		SshPublicKey             string `json:"ssh_public_key,omitempty"`
+		VipDhcpAllocation        bool   `json:"vip_dhcp_allocation,omitempty"`
+		HttpProxy                string `json:"http_proxy,omitempty"`
+		HttpsProxy               string `json:"https_proxy,omitempty"`
+		NoProxy                  string `json:"no_proxy,omitempty"`
+		UserManagedNetworking    bool   `json:"user_managed_networking,omitempty"`
+		AdditionalNtpSource      string `json:"additional_ntp_source,omitempty"`
+		Hyperthreading           string `json:"hyperthreading,omitempty"`
+		NetworkType              string `json:"network_type,omitempty"`
+		SchedulableMasters       bool   `json:"schedulable_masters,omitempty"`
+	}
+
+	PullSecret struct {
+		Auths map[string]PullSecretCredential `json:"auths"`
+	}
+
+	PullSecretCredential struct {
+		Auth  string `json:"auth"`
+		Email string `json:"email"`
+	}
+
+	ImageCreateParams struct {
+		ImageType    string `json:"image_type"`
+		SshPublicKey string `json:"ssh_public_key"`
+	}
+
+	ImageInfo struct {
+		SshPublicKey        string `json:"ssh_public_key"`
+		SizeBytes           int    `json:"size_bytes"`
+		DownloadUrl         string `json:"download_url"`
+		GeneratorVersion    string `json:"generator_version"`
+		CreatedAt           string `json:"created_at"`
+		ExpiresAt           string `json:"expires_at"`
+		StaticNetworkConfig string `json:"static_network_config"`
+		Type                string `json:"type"`
 	}
 )

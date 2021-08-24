@@ -1,11 +1,34 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 )
+
+func ValidateNetworkType(networkType string) error {
+	switch networkType {
+	case "OpenShiftSDN":
+		return nil
+	case "OVNKubernetes":
+		return nil
+	}
+
+	return fmt.Errorf("unknown network type; %s", networkType)
+}
+
+func ValidateImageType(imageType string) error {
+	switch imageType {
+	case "minimal-iso":
+		return nil
+	case "full-iso":
+		return nil
+	}
+
+	return fmt.Errorf("unknown image type; %s", imageType)
+}
 
 func (client *ApiClient) ListClusters() (ClusterList, error) {
 	var clusters ClusterList
@@ -207,4 +230,87 @@ func (client *ApiClient) DeleteCluster(clusterid string) error {
 
 	return nil
 
+}
+
+func (client *ApiClient) GetPullSecret() (*PullSecret, error) {
+	var pullSecret PullSecret
+	var accessTokenUrl string = "https://api.openshift.com/api/accounts_mgmt/v1/access_token"
+
+	req, err := client.NewRequest(
+		"POST",
+		accessTokenUrl,
+		nil,
+	)
+	resp, err := client.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != 200 {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			body = []byte("unknown error")
+		}
+		return nil, fmt.Errorf(
+			"failed to get pull secret: %s [%d]: %s",
+			http.StatusText(resp.StatusCode), resp.StatusCode, body,
+		)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(body, &pullSecret); err != nil {
+		return nil, err
+	}
+
+	return &pullSecret, nil
+}
+
+func (client *ApiClient) CreateCluster(cluster *ClusterCreateParams) (*ClusterDetail, error) {
+	createParamsJson, err := cluster.ToJSON()
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := client.NewRequest(
+		"POST",
+		fmt.Sprintf("%s/clusters", client.ApiUrl),
+		bytes.NewBuffer(createParamsJson),
+	)
+	resp, err := client.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != 201 {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			body = []byte("unknown error")
+		}
+		return nil, fmt.Errorf(
+			"failed to create cluster: %s [%d]: %s",
+			http.StatusText(resp.StatusCode), resp.StatusCode, body,
+		)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var detail ClusterDetail
+	if err := json.Unmarshal(body, &detail); err != nil {
+		return nil, err
+	}
+
+	return &detail, nil
+}
+
+func (createParams *ClusterCreateParams) ToJSON() ([]byte, error) {
+	createParamsJson, err := json.Marshal(createParams)
+	if err != nil {
+		return nil, err
+	}
+
+	return createParamsJson, nil
 }

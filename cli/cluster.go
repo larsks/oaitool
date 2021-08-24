@@ -2,12 +2,28 @@ package cli
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"text/tabwriter"
 
+	"github.com/larsks/oaitool/api"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
+
+func getClusterFromArgs(ctx *Context, args []string) (*api.ClusterDetail, error) {
+	if len(args) < 1 || args[0] == "" {
+		return nil, fmt.Errorf("missing cluster name")
+	}
+	clusterid := args[0]
+
+	cluster, err := ctx.api.FindCluster(clusterid)
+	if err != nil {
+		return nil, err
+	}
+
+	return cluster, nil
+}
 
 func NewCmdClusterList(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
@@ -42,6 +58,120 @@ func NewCmdClusterList(ctx *Context) *cobra.Command {
 	return &cmd
 }
 
+func NewCmdClusterCreate(ctx *Context) *cobra.Command {
+	cmd := cobra.Command{
+		Use:           "create <name_or_id>",
+		Short:         "Create an assisted installer cluster",
+		Args:          cobra.ExactArgs(1),
+		SilenceErrors: true,
+		SilenceUsage:  true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var ps *api.PullSecret
+
+			pspath, err := cmd.Flags().GetString("pull-secret")
+			if err != nil {
+				return err
+			}
+
+			if pspath != "" {
+				ps, err = api.PullSecretFromFile(pspath)
+			} else {
+				ps, err = ctx.api.GetPullSecret()
+			}
+
+			if err != nil {
+				return err
+			}
+
+			psjson, err := ps.ToJSON()
+			if err != nil {
+				return err
+			}
+
+			openshiftVersion, err := cmd.Flags().GetString("openshift-version")
+			if err != nil {
+				return err
+			}
+
+			baseDnsDomain, err := cmd.Flags().GetString("base-domain")
+			if err != nil {
+				return err
+			}
+
+			noDhcpAllocation, err := cmd.Flags().GetBool("no-dhcp-allocation")
+			if err != nil {
+				return err
+			}
+
+			apiVip, err := cmd.Flags().GetString("api-vip")
+			if err != nil {
+				return err
+			}
+
+			ingressVip, err := cmd.Flags().GetString("ingress-vip")
+			if err != nil {
+				return err
+			}
+
+			networkType, err := cmd.Flags().GetString("network-type")
+			if err != nil {
+				return err
+			}
+
+			if err = api.ValidateNetworkType(networkType); err != nil {
+				return err
+			}
+
+			sshKeyFile, err := cmd.Flags().GetString("ssh-public-key")
+			if err != nil {
+				return err
+			}
+
+			var sshKey []byte
+			if sshKeyFile != "" {
+				log.Debugf("reading ssh key from %s", sshKeyFile)
+				sshKey, err = ioutil.ReadFile(sshKeyFile)
+				if err != nil {
+					return err
+				}
+			}
+
+			createParams := api.ClusterCreateParams{
+				Name:              args[0],
+				PullSecret:        string(psjson),
+				OpenshiftVersion:  openshiftVersion,
+				BaseDnsDomain:     baseDnsDomain,
+				VipDhcpAllocation: !noDhcpAllocation,
+				ApiVip:            apiVip,
+				IngressVip:        ingressVip,
+				NetworkType:       networkType,
+				SshPublicKey:      string(sshKey),
+			}
+
+			log.Debugf("creating cluster with parameters: %+v", createParams)
+			detail, err := ctx.api.CreateCluster(&createParams)
+			if err != nil {
+				return err
+			}
+
+			fmt.Printf("%s %s\n", detail.Name, detail.ID)
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringP("pull-secret", "s", "", "Read pull secret from a file")
+	cmd.Flags().StringP("openshift-version", "o", "", "Set OpenShift version")
+	cmd.Flags().StringP("base-domain", "b", "", "Base DNS Domain")
+	cmd.Flags().Bool("no-dhcp-allocation", false, "Do not allocate VIP addresses using DHCP")
+	cmd.Flags().StringP("api-vip", "a", "", "API VIP address")
+	cmd.Flags().StringP("ingress-vip", "i", "", "Ingress VIP address")
+	cmd.Flags().StringP("ssh-public-key", "k", "", "Public ssh key")
+	cmd.Flags().StringP("network-type", "n", "", "Network type")
+
+	return &cmd
+}
+
 func NewCmdClusterInstall(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
 		Use:           "install <name_or_id> (--start | --cancel | --reset )",
@@ -50,13 +180,7 @@ func NewCmdClusterInstall(ctx *Context) *cobra.Command {
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 {
-				return fmt.Errorf("missing cluster name or id")
-			}
-
-			clusterid := args[0]
-			log.Debugf("look up cluster %s", clusterid)
-			cluster, err := ctx.api.FindCluster(clusterid)
+			cluster, err := getClusterFromArgs(ctx, args)
 			if err != nil {
 				return err
 			}
@@ -70,15 +194,15 @@ func NewCmdClusterInstall(ctx *Context) *cobra.Command {
 
 				switch {
 				case mode == "start" && flagval:
-					log.Infof("starting install of cluster %s (%s)", clusterid, cluster.ID)
+					log.Infof("starting install of cluster %s (%s)", cluster.Name, cluster.ID)
 					err = ctx.api.InstallCluster(cluster.ID)
 					action = true
 				case mode == "cancel" && flagval:
-					log.Infof("starting install of cluster %s (%s)", clusterid, cluster.ID)
+					log.Infof("starting install of cluster %s (%s)", cluster.Name, cluster.ID)
 					err = ctx.api.CancelCluster(cluster.ID)
 					action = true
 				case mode == "reset" && flagval:
-					log.Infof("starting install of cluster %s (%s)", clusterid, cluster.ID)
+					log.Infof("starting install of cluster %s (%s)", cluster.Name, cluster.ID)
 					err = ctx.api.ResetCluster(cluster.ID)
 					action = true
 				}
@@ -111,13 +235,7 @@ func NewCmdClusterDelete(ctx *Context) *cobra.Command {
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 {
-				return fmt.Errorf("missing cluster name or id")
-			}
-
-			clusterid := args[0]
-			log.Debugf("look up cluster %s", clusterid)
-			cluster, err := ctx.api.FindCluster(clusterid)
+			cluster, err := getClusterFromArgs(ctx, args)
 			if err != nil {
 				return err
 			}
@@ -141,13 +259,7 @@ func NewCmdClusterShow(ctx *Context) *cobra.Command {
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 {
-				return fmt.Errorf("missing cluster name or id")
-			}
-
-			clusterid := args[0]
-			log.Debugf("look up cluster %s", clusterid)
-			cluster, err := ctx.api.FindCluster(clusterid)
+			cluster, err := getClusterFromArgs(ctx, args)
 			if err != nil {
 				return err
 			}
@@ -170,6 +282,27 @@ func NewCmdClusterShow(ctx *Context) *cobra.Command {
 	return &cmd
 }
 
+func NewCmdClusterStatus(ctx *Context) *cobra.Command {
+	cmd := cobra.Command{
+		Use:           "status <name_or_id>",
+		Short:         "Get cluster status",
+		Args:          cobra.ExactArgs(1),
+		SilenceErrors: true,
+		SilenceUsage:  true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cluster, err := getClusterFromArgs(ctx, args)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(cluster.Status)
+			return nil
+		},
+	}
+
+	return &cmd
+}
+
 func NewCmdCluster(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
 		Use:   "cluster",
@@ -179,8 +312,10 @@ func NewCmdCluster(ctx *Context) *cobra.Command {
 	cmd.AddCommand(
 		NewCmdClusterList(ctx),
 		NewCmdClusterShow(ctx),
+		NewCmdClusterStatus(ctx),
 		NewCmdClusterDelete(ctx),
 		NewCmdClusterInstall(ctx),
+		NewCmdClusterCreate(ctx),
 	)
 
 	return &cmd
