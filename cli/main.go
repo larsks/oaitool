@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/larsks/oaitool/api"
+	"github.com/larsks/oaitool/version"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/cobra"
@@ -122,11 +123,25 @@ func initContext(cmd *cobra.Command, ctx *Context) error {
 	return nil
 }
 
+func NewCmdVersion(ctx *Context) *cobra.Command {
+	cmd := cobra.Command{
+		Use:   "version",
+		Short: "Show version information",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Printf("Build version: %s\n", version.BuildVersion)
+			fmt.Printf("Build ref: %s\n", version.BuildRef)
+			fmt.Printf("Build date: %s\n", version.BuildDate)
+		},
+	}
+
+	return &cmd
+}
+
 func NewCmdRoot() *cobra.Command {
 	ctx := &Context{}
 
 	cmd := cobra.Command{
-		Use:   "oai",
+		Use:   "oaitool",
 		Short: "A tool for interacting with the OpenShift Assisted Installer API",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if err := initLogging(cmd); err != nil {
@@ -156,6 +171,7 @@ func NewCmdRoot() *cobra.Command {
 	cmd.AddCommand(
 		NewCmdCluster(ctx),
 		NewCmdHost(ctx),
+		NewCmdVersion(ctx),
 	)
 
 	return &cmd
