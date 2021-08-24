@@ -131,6 +131,7 @@ func NewCmdClusterCreate(ctx *Context) *cobra.Command {
 				NetworkType:      networkType,
 			}
 
+			log.Infof("creating cluster %s", createParams.Name)
 			log.Debugf("creating cluster with parameters: %+v", createParams)
 			cluster, err := ctx.api.CreateCluster(&createParams)
 			if err != nil {
@@ -271,6 +272,7 @@ func NewCmdClusterDelete(ctx *Context) *cobra.Command {
 				return err
 			}
 
+			log.Infof("deleting cluster %s", cluster.Name)
 			if err := ctx.api.DeleteCluster(cluster.ID); err != nil {
 				return err
 			}
