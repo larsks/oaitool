@@ -34,6 +34,20 @@ var supportedImageTypes = []string{
 	"full-iso",
 }
 
+var supportedClusterStatus = []string{
+	"insufficient",
+	"ready",
+	"error",
+	"preparing-for-installation",
+	"pending-for-input",
+	"installing",
+	"finalizing",
+	"installed",
+	"adding-hosts",
+	"cancelled",
+	"installing-pending-user-action",
+}
+
 func valInList(value string, allowed_values []string) bool {
 	for _, this := range allowed_values {
 		if this == value {
@@ -42,6 +56,10 @@ func valInList(value string, allowed_values []string) bool {
 	}
 
 	return false
+}
+
+func ValidateClusterStatus(status string) bool {
+	return valInList(status, supportedClusterStatus)
 }
 
 func ValidateNetworkType(networkType string) bool {

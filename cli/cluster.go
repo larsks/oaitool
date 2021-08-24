@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"text/tabwriter"
+	"time"
 
 	"github.com/larsks/oaitool/api"
 	log "github.com/sirupsen/logrus"
@@ -452,6 +453,77 @@ func NewCmdClusterGetFile(ctx *Context) *cobra.Command {
 	return &cmd
 }
 
+func NewCmdClusterWaitForStatus(ctx *Context) *cobra.Command {
+	cmd := cobra.Command{
+		Use:           "wait-for-status <status>",
+		Short:         "Wait until cluster reaches the named status",
+		Args:          cobra.ExactArgs(1),
+		SilenceErrors: true,
+		SilenceUsage:  true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cluster, err := getClusterFromFlags(ctx, cmd)
+			if err != nil {
+				return err
+			}
+
+			retries, err := cmd.Flags().GetInt("retries")
+			if err != nil {
+				return err
+			}
+
+			interval, err := cmd.Flags().GetInt("interval")
+			if err != nil {
+				return err
+			}
+
+			timeout, err := cmd.Flags().GetInt("timeout")
+			if err != nil {
+				return err
+			}
+
+			desired_status := args[0]
+			if !api.ValidateClusterStatus(desired_status) {
+				return fmt.Errorf("invalid status")
+			}
+
+			retry_count := 0
+			time_start := time.Now()
+			for {
+				if cluster.Status == desired_status {
+					break
+				}
+
+				log.Debugf("checking status, have %s want %s",
+					cluster.Status, desired_status)
+
+				if timeout > 0 && time.Since(time_start).Seconds() > float64(timeout) {
+					return fmt.Errorf("timed out waiting for status")
+				}
+
+				retry_count++
+				if retries > 0 && retry_count > retries {
+					return fmt.Errorf("too many retries waiting for status")
+				}
+
+				time.Sleep(time.Duration(interval) * time.Second)
+				cluster, err = ctx.api.GetCluster(cluster.ID)
+				if err != nil {
+					return err
+				}
+
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().Int("retries", 0, "Number of times to check status")
+	cmd.Flags().Int("interval", 5, "Number of seconds to sleep between retries")
+	cmd.Flags().Int("timeout", 0, "Number of seconds after which we timeout")
+
+	return &cmd
+}
+
 func NewCmdCluster(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
 		Use:   "cluster",
@@ -471,6 +543,7 @@ func NewCmdCluster(ctx *Context) *cobra.Command {
 		NewCmdClusterGetImageUrl(ctx),
 		NewCmdClusterGetKubeconfig(ctx),
 		NewCmdClusterGetFile(ctx),
+		NewCmdClusterWaitForStatus(ctx),
 	)
 
 	return &cmd
