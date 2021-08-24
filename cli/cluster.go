@@ -103,8 +103,8 @@ func NewCmdClusterCreate(ctx *Context) *cobra.Command {
 				return err
 			}
 
-			if err = api.ValidateNetworkType(networkType); err != nil {
-				return err
+			if !api.ValidateNetworkType(networkType) {
+				return fmt.Errorf("invalid network type")
 			}
 
 			sshKeyFile, err := cmd.Flags().GetString("ssh-public-key")
@@ -366,6 +366,9 @@ func NewCmdClusterGetImageUrl(ctx *Context) *cobra.Command {
 				if err != nil {
 					return err
 				}
+				if !api.ValidateImageType(imageType) {
+					return fmt.Errorf("invalid image type")
+				}
 
 				log.Info("generating discovery image")
 				cluster, err = ctx.api.CreateDiscoveryImage(cluster.ID, imageType, "")
@@ -385,6 +388,64 @@ func NewCmdClusterGetImageUrl(ctx *Context) *cobra.Command {
 	return &cmd
 }
 
+func NewCmdClusterGetKubeconfig(ctx *Context) *cobra.Command {
+	cmd := cobra.Command{
+		Use:           "get-kubeconfig <name_or_id>",
+		Short:         "Get cluster kubeconfig",
+		Args:          cobra.ExactArgs(1),
+		SilenceErrors: true,
+		SilenceUsage:  true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cluster, err := getClusterFromArgs(ctx, args)
+			if err != nil {
+				return err
+			}
+
+			kubeconfig, err := ctx.api.GetKubeconfig(cluster.ID)
+			if err != nil {
+				return err
+			}
+
+			os.Stdout.Write(kubeconfig)
+
+			return nil
+		},
+	}
+
+	return &cmd
+}
+
+func NewCmdClusterGetFile(ctx *Context) *cobra.Command {
+	cmd := cobra.Command{
+		Use:           "get-file <name_or_id>",
+		Short:         "Get file from cluster",
+		Args:          cobra.ExactArgs(2),
+		SilenceErrors: true,
+		SilenceUsage:  true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cluster, err := getClusterFromArgs(ctx, args)
+			if err != nil {
+				return err
+			}
+
+			if !api.ValidateDownloadFile(args[1]) {
+				return fmt.Errorf("invalid filename")
+			}
+
+			content, err := ctx.api.GetFile(cluster.ID, args[1])
+			if err != nil {
+				return err
+			}
+
+			os.Stdout.Write(content)
+
+			return nil
+		},
+	}
+
+	return &cmd
+}
+
 func NewCmdCluster(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
 		Use:   "cluster",
@@ -400,6 +461,8 @@ func NewCmdCluster(ctx *Context) *cobra.Command {
 		NewCmdClusterCreate(ctx),
 		NewCmdClusterSetVips(ctx),
 		NewCmdClusterGetImageUrl(ctx),
+		NewCmdClusterGetKubeconfig(ctx),
+		NewCmdClusterGetFile(ctx),
 	)
 
 	return &cmd

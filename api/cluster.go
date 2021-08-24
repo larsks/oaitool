@@ -10,26 +10,50 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func ValidateNetworkType(networkType string) error {
-	switch networkType {
-	case "OpenShiftSDN":
-		return nil
-	case "OVNKubernetes":
-		return nil
-	}
-
-	return fmt.Errorf("unknown network type; %s", networkType)
+var supportedFiles = []string{
+	"bootstrap.ign",
+	"master.ign",
+	"metadata.json",
+	"worker.ign",
+	"kubeadmin-password",
+	"kubeconfig",
+	"kubeconfig-noingress",
+	"install-config.yaml",
+	"discovery.ign",
+	"custom_manifests.json",
+	"custom_manifests.yaml",
 }
 
-func ValidateImageType(imageType string) error {
-	switch imageType {
-	case "minimal-iso":
-		return nil
-	case "full-iso":
-		return nil
+var supportedNetworkTypes = []string{
+	"OpenShiftSDN",
+	"OVNKubernetes",
+}
+
+var supportedImageTypes = []string{
+	"minimal-iso",
+	"full-iso",
+}
+
+func valInList(value string, allowed_values []string) bool {
+	for _, this := range allowed_values {
+		if this == value {
+			return true
+		}
 	}
 
-	return fmt.Errorf("unknown image type; %s", imageType)
+	return false
+}
+
+func ValidateNetworkType(networkType string) bool {
+	return valInList(networkType, supportedNetworkTypes)
+}
+
+func ValidateImageType(imageType string) bool {
+	return valInList(imageType, supportedImageTypes)
+}
+
+func ValidateDownloadFile(filename string) bool {
+	return valInList(filename, supportedFiles)
 }
 
 func (client *ApiClient) ListClusters() (ClusterList, error) {
@@ -234,6 +258,66 @@ func (client *ApiClient) DeleteCluster(clusterid string) error {
 
 }
 
+func (client *ApiClient) GetKubeconfig(clusterid string) ([]byte, error) {
+	req, err := client.NewRequest(
+		"GET",
+		fmt.Sprintf("%s/clusters/%s/downloads/kubeconfig", client.ApiUrl, clusterid),
+		nil,
+	)
+	resp, err := client.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != 200 {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			body = []byte("unknown error")
+		}
+		return nil, fmt.Errorf(
+			"failed to fetch kubeconfig: %s [%d]: %s",
+			http.StatusText(resp.StatusCode), resp.StatusCode, body,
+		)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return body, nil
+}
+
+func (client *ApiClient) GetFile(clusterid, filename string) ([]byte, error) {
+	req, err := client.NewRequest(
+		"GET",
+		fmt.Sprintf("%s/clusters/%s/downloads/files?file_name=%s",
+			client.ApiUrl, clusterid, filename),
+		nil,
+	)
+	resp, err := client.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != 200 {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			body = []byte("unknown error")
+		}
+		return nil, fmt.Errorf(
+			"failed to fetch %s: %s [%d]: %s",
+			filename,
+			http.StatusText(resp.StatusCode), resp.StatusCode, body,
+		)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return body, nil
+}
+
 func (client *ApiClient) GetPullSecret() (*PullSecret, error) {
 	var pullSecret PullSecret
 	var accessTokenUrl string = "https://api.openshift.com/api/accounts_mgmt/v1/access_token"
@@ -272,10 +356,6 @@ func (client *ApiClient) GetPullSecret() (*PullSecret, error) {
 func (client *ApiClient) CreateDiscoveryImage(
 	clusterid string, imageType string, sshPublicKey string) (*Cluster, error) {
 	var cluster Cluster
-
-	if err := ValidateImageType(imageType); err != nil {
-		return nil, err
-	}
 
 	createParams := ImageCreateParams{
 		ImageType:    imageType,
