@@ -98,21 +98,6 @@ func NewCmdClusterCreate(ctx *Context) *cobra.Command {
 				return err
 			}
 
-			noDhcpAllocation, err := cmd.Flags().GetBool("no-dhcp-allocation")
-			if err != nil {
-				return err
-			}
-
-			apiVip, err := cmd.Flags().GetString("api-vip")
-			if err != nil {
-				return err
-			}
-
-			ingressVip, err := cmd.Flags().GetString("ingress-vip")
-			if err != nil {
-				return err
-			}
-
 			networkType, err := cmd.Flags().GetString("network-type")
 			if err != nil {
 				return err
@@ -137,37 +122,80 @@ func NewCmdClusterCreate(ctx *Context) *cobra.Command {
 			}
 
 			createParams := api.ClusterCreateParams{
-				Name:              args[0],
-				PullSecret:        string(psjson),
-				OpenshiftVersion:  openshiftVersion,
-				BaseDnsDomain:     baseDnsDomain,
-				VipDhcpAllocation: !noDhcpAllocation,
-				ApiVip:            apiVip,
-				IngressVip:        ingressVip,
-				NetworkType:       networkType,
-				SshPublicKey:      string(sshKey),
+				Name:             args[0],
+				PullSecret:       string(psjson),
+				OpenshiftVersion: openshiftVersion,
+				BaseDnsDomain:    baseDnsDomain,
+				SshPublicKey:     string(sshKey),
+				NetworkType:      networkType,
 			}
 
 			log.Debugf("creating cluster with parameters: %+v", createParams)
-			detail, err := ctx.api.CreateCluster(&createParams)
+			cluster, err := ctx.api.CreateCluster(&createParams)
 			if err != nil {
 				return err
 			}
 
-			fmt.Printf("%s %s\n", detail.Name, detail.ID)
+			fmt.Printf("%s %s\n", cluster.Name, cluster.ID)
 
 			return nil
 		},
 	}
 
-	cmd.Flags().StringP("pull-secret", "s", "", "Read pull secret from a file")
-	cmd.Flags().StringP("openshift-version", "o", "", "Set OpenShift version")
-	cmd.Flags().StringP("base-domain", "b", "", "Base DNS Domain")
-	cmd.Flags().Bool("no-dhcp-allocation", false, "Do not allocate VIP addresses using DHCP")
-	cmd.Flags().StringP("api-vip", "a", "", "API VIP address")
-	cmd.Flags().StringP("ingress-vip", "i", "", "Ingress VIP address")
-	cmd.Flags().StringP("ssh-public-key", "k", "", "Public ssh key")
-	cmd.Flags().StringP("network-type", "n", "", "Network type")
+	cmd.Flags().String("pull-secret", "", "Read pull secret from a file")
+	cmd.Flags().String("openshift-version", "", "Set OpenShift version")
+	cmd.Flags().String("base-domain", "", "Base DNS Domain")
+	cmd.Flags().String("ssh-public-key", "", "Public ssh key")
+	cmd.Flags().String("network-type", "OpenShiftSDN", "Network type")
+
+	return &cmd
+}
+
+func NewCmdClusterSetVips(ctx *Context) *cobra.Command {
+	cmd := cobra.Command{
+		Use:           "set-vips --api-vip a.b.c.d --ingress-vip w.x.y.z <name_or_id>",
+		Short:         "Create an assisted installer cluster",
+		Args:          cobra.ExactArgs(1),
+		SilenceErrors: true,
+		SilenceUsage:  true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cluster, err := getClusterFromArgs(ctx, args)
+			if err != nil {
+				return err
+			}
+
+			if cluster.MachineNetworkCidr == "" {
+				return fmt.Errorf("cluster does not have a machine network defined")
+			}
+
+			apiVip, err := cmd.Flags().GetString("api-vip")
+			if err != nil {
+				return err
+			}
+
+			ingressVip, err := cmd.Flags().GetString("ingress-vip")
+			if err != nil {
+				return err
+			}
+
+			networkPatch := api.ClusterNetworkPatch{
+				ApiVip:            apiVip,
+				IngressVip:        ingressVip,
+				VipDhcpAllocation: false,
+			}
+			log.Debugf("patching cluster network configuration: %+v", networkPatch)
+			cluster, err = ctx.api.PatchCluster(cluster.ID, &networkPatch)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+	}
+
+	cmd.Flags().String("api-vip", "", "API VIP")
+	cmd.Flags().String("ingress-vip", "", "Ingress VIP")
+	cmd.MarkFlagRequired("api-vip")
+	cmd.MarkFlagRequired("ingress-vip")
 
 	return &cmd
 }
@@ -264,20 +292,37 @@ func NewCmdClusterShow(ctx *Context) *cobra.Command {
 				return err
 			}
 
-			w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
-			fmt.Fprintf(w, "Name\t%s\n", cluster.Name)
-			fmt.Fprintf(w, "BaseDNSDomain\t%s\n", cluster.BaseDNSDomain)
-			fmt.Fprintf(w, "ID\t%s\n", cluster.ID)
-			fmt.Fprintf(w, "EnabledHostCount\t%d\n", cluster.EnabledHostCount)
-			fmt.Fprintf(w, "APIVip\t%s\n", cluster.APIVip)
-			fmt.Fprintf(w, "IngressVip\t%s\n", cluster.IngressVip)
-			fmt.Fprintf(w, "OpenshiftVersion\t%s\n", cluster.OpenshiftVersion)
-			fmt.Fprintf(w, "Status\t%s\n", cluster.Status)
-			w.Flush()
+			use_json, err := cmd.Flags().GetBool("json")
+			if err != nil {
+				return err
+			}
+
+			if use_json {
+				clusterJson, err := cluster.ToJSON()
+				if err != nil {
+					return err
+				}
+
+				os.Stdout.Write(clusterJson)
+			} else {
+
+				w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
+				fmt.Fprintf(w, "Name\t%s\n", cluster.Name)
+				fmt.Fprintf(w, "BaseDNSDomain\t%s\n", cluster.BaseDNSDomain)
+				fmt.Fprintf(w, "ID\t%s\n", cluster.ID)
+				fmt.Fprintf(w, "EnabledHostCount\t%d\n", cluster.EnabledHostCount)
+				fmt.Fprintf(w, "ApiVip\t%s\n", cluster.ApiVip)
+				fmt.Fprintf(w, "IngressVip\t%s\n", cluster.IngressVip)
+				fmt.Fprintf(w, "OpenshiftVersion\t%s\n", cluster.OpenshiftVersion)
+				fmt.Fprintf(w, "Status\t%s\n", cluster.Status)
+				w.Flush()
+			}
 
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolP("json", "j", false, "Show full JSON data")
 
 	return &cmd
 }
@@ -353,6 +398,7 @@ func NewCmdCluster(ctx *Context) *cobra.Command {
 		NewCmdClusterDelete(ctx),
 		NewCmdClusterInstall(ctx),
 		NewCmdClusterCreate(ctx),
+		NewCmdClusterSetVips(ctx),
 		NewCmdClusterGetImageUrl(ctx),
 	)
 

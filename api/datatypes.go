@@ -4,6 +4,10 @@ import "time"
 
 // Most of these structs were generated using https://mholt.github.io/json-to-go/
 type (
+	JsonObject interface {
+		ToJSON() ([]byte, error)
+	}
+
 	TokenResponse struct {
 		AccessToken       string `json:"access_token"`
 		ExpiresIn         int    `json:"expires_in"`
@@ -18,9 +22,15 @@ type (
 
 	ClusterList []Cluster
 
+	ClusterNetworkPatch struct {
+		ApiVip            string `json:"api_vip"`
+		IngressVip        string `json:"ingress_vip"`
+		VipDhcpAllocation bool   `json:"vip_dhcp_allocation"`
+	}
+
 	Cluster struct {
 		AmsSubscriptionID          string               `json:"ams_subscription_id"`
-		APIVip                     string               `json:"api_vip"`
+		ApiVip                     string               `json:"api_vip"`
 		BaseDNSDomain              string               `json:"base_dns_domain"`
 		ClusterNetworkCidr         string               `json:"cluster_network_cidr"`
 		ClusterNetworkHostPrefix   int                  `json:"cluster_network_host_prefix"`
@@ -54,7 +64,7 @@ type (
 		PullSecretSet              bool                 `json:"pull_secret_set"`
 		SchedulableMasters         bool                 `json:"schedulable_masters"`
 		ServiceNetworkCidr         string               `json:"service_network_cidr"`
-		SSHPublicKey               string               `json:"ssh_public_key"`
+		SshPublicKey               string               `json:"ssh_public_key"`
 		Status                     string               `json:"status"`
 		StatusInfo                 string               `json:"status_info"`
 		StatusUpdatedAt            time.Time            `json:"status_updated_at"`
@@ -231,7 +241,6 @@ type (
 		ClusterNetworkCidr       string `json:"cluster_network_cidr,omitempty"`
 		ClusterNetworkHostPrefix int    `json:"cluster_network_host_prefix,omitempty"`
 		ServiceNetworkCidr       string `json:"service_network_cidr,omitempty"`
-		ApiVip                   string `json:"api_vip,omitempty"`
 		IngressVip               string `json:"ingress_vip,omitempty"`
 		SshPublicKey             string `json:"ssh_public_key,omitempty"`
 		VipDhcpAllocation        bool   `json:"vip_dhcp_allocation,omitempty"`

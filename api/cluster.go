@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func ValidateNetworkType(networkType string) error {
@@ -358,6 +360,55 @@ func (client *ApiClient) CreateCluster(cluster *ClusterCreateParams) (*Cluster, 
 	return &detail, nil
 }
 
+func (client *ApiClient) PatchCluster(clusterid string, patch JsonObject) (*Cluster, error) {
+	patchJson, err := patch.ToJSON()
+	log.Debugf("patching cluster %s with: %s", clusterid, string(patchJson))
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := client.NewRequest(
+		"PATCH",
+		fmt.Sprintf("%s/clusters/%s", client.ApiUrl, clusterid),
+		bytes.NewBuffer(patchJson),
+	)
+	resp, err := client.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != 201 {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			body = []byte("unknown error")
+		}
+		return nil, fmt.Errorf(
+			"failed to patch cluster: %s [%d]: %s",
+			http.StatusText(resp.StatusCode), resp.StatusCode, body,
+		)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var detail Cluster
+	if err := json.Unmarshal(body, &detail); err != nil {
+		return nil, err
+	}
+
+	return &detail, nil
+}
+
+func (cluster *Cluster) ToJSON() ([]byte, error) {
+	clusterJson, err := json.Marshal(cluster)
+	if err != nil {
+		return nil, err
+	}
+
+	return clusterJson, nil
+}
+
 func (createParams *ClusterCreateParams) ToJSON() ([]byte, error) {
 	createParamsJson, err := json.Marshal(createParams)
 	if err != nil {
@@ -365,4 +416,13 @@ func (createParams *ClusterCreateParams) ToJSON() ([]byte, error) {
 	}
 
 	return createParamsJson, nil
+}
+
+func (patch *ClusterNetworkPatch) ToJSON() ([]byte, error) {
+	patchJson, err := json.Marshal(patch)
+	if err != nil {
+		return nil, err
+	}
+
+	return patchJson, nil
 }
