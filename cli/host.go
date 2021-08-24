@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func getClusterFromFlags(ctx *Context, cmd *cobra.Command) (*api.ClusterDetail, error) {
+func getClusterFromFlags(ctx *Context, cmd *cobra.Command) (*api.Cluster, error) {
 	clusterid, err := cmd.Flags().GetString("cluster")
 	if err != nil {
 		return nil, err

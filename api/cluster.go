@@ -57,7 +57,7 @@ func (client *ApiClient) ListClusters() (ClusterList, error) {
 // Find a cluster by id or name. First treat `name` as a cluster id
 // and attempt to fetch it directly. If that fails, get a list of
 // available clusters and look for the cluster name.
-func (client *ApiClient) FindCluster(clusterid string) (*ClusterDetail, error) {
+func (client *ApiClient) FindCluster(clusterid string) (*Cluster, error) {
 	detail, err := client.GetCluster(clusterid)
 	if err == nil {
 		return detail, nil
@@ -93,8 +93,8 @@ func (client *ApiClient) FindCluster(clusterid string) (*ClusterDetail, error) {
 	return detail, nil
 }
 
-func (client *ApiClient) GetCluster(clusterid string) (*ClusterDetail, error) {
-	var clusterDetail ClusterDetail
+func (client *ApiClient) GetCluster(clusterid string) (*Cluster, error) {
+	var clusterDetail Cluster
 
 	req, err := client.NewRequest(
 		"GET",
@@ -267,7 +267,59 @@ func (client *ApiClient) GetPullSecret() (*PullSecret, error) {
 	return &pullSecret, nil
 }
 
-func (client *ApiClient) CreateCluster(cluster *ClusterCreateParams) (*ClusterDetail, error) {
+func (client *ApiClient) CreateDiscoveryImage(
+	clusterid string, imageType string, sshPublicKey string) (*Cluster, error) {
+	var cluster Cluster
+
+	if err := ValidateImageType(imageType); err != nil {
+		return nil, err
+	}
+
+	createParams := ImageCreateParams{
+		ImageType:    imageType,
+		SshPublicKey: sshPublicKey,
+	}
+	createParamsJson, err := json.Marshal(createParams)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := client.NewRequest(
+		"POST",
+		fmt.Sprintf(
+			"%s/clusters/%s/downloads/image",
+			client.ApiUrl,
+			clusterid),
+		bytes.NewBuffer(createParamsJson),
+	)
+	resp, err := client.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != 201 {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			body = []byte("unknown error")
+		}
+		return nil, fmt.Errorf(
+			"failed to create cluster: %s [%d]: %s",
+			http.StatusText(resp.StatusCode), resp.StatusCode, body,
+		)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(body, &cluster); err != nil {
+		return nil, err
+	}
+
+	return &cluster, nil
+}
+
+func (client *ApiClient) CreateCluster(cluster *ClusterCreateParams) (*Cluster, error) {
 	createParamsJson, err := cluster.ToJSON()
 	if err != nil {
 		return nil, err
@@ -298,7 +350,7 @@ func (client *ApiClient) CreateCluster(cluster *ClusterCreateParams) (*ClusterDe
 		return nil, err
 	}
 
-	var detail ClusterDetail
+	var detail Cluster
 	if err := json.Unmarshal(body, &detail); err != nil {
 		return nil, err
 	}

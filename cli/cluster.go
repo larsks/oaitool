@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func getClusterFromArgs(ctx *Context, args []string) (*api.ClusterDetail, error) {
+func getClusterFromArgs(ctx *Context, args []string) (*api.Cluster, error) {
 	if len(args) < 1 || args[0] == "" {
 		return nil, fmt.Errorf("missing cluster name")
 	}
@@ -303,6 +303,43 @@ func NewCmdClusterStatus(ctx *Context) *cobra.Command {
 	return &cmd
 }
 
+func NewCmdClusterGetImageUrl(ctx *Context) *cobra.Command {
+	cmd := cobra.Command{
+		Use:           "get-image-url <name_or_id>",
+		Short:         "Get discovery image download url",
+		Args:          cobra.ExactArgs(1),
+		SilenceErrors: true,
+		SilenceUsage:  true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cluster, err := getClusterFromArgs(ctx, args)
+			if err != nil {
+				return err
+			}
+
+			if cluster.ImageInfo.DownloadUrl == "" {
+				imageType, err := cmd.Flags().GetString("image-type")
+				if err != nil {
+					return err
+				}
+
+				log.Info("generating discovery image")
+				cluster, err = ctx.api.CreateDiscoveryImage(cluster.ID, imageType, "")
+				if err != nil {
+					return err
+				}
+			}
+
+			log.Debugf("image info: %+v", cluster.ImageInfo)
+			fmt.Println(cluster.ImageInfo.DownloadUrl)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringP("image-type", "T", "minimal-iso", "set discovery image type")
+
+	return &cmd
+}
+
 func NewCmdCluster(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
 		Use:   "cluster",
@@ -316,6 +353,7 @@ func NewCmdCluster(ctx *Context) *cobra.Command {
 		NewCmdClusterDelete(ctx),
 		NewCmdClusterInstall(ctx),
 		NewCmdClusterCreate(ctx),
+		NewCmdClusterGetImageUrl(ctx),
 	)
 
 	return &cmd
