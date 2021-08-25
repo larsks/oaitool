@@ -3,6 +3,15 @@
 Oaitool is a tool for interacting with the OpenShift Assisted
 Installer API.
 
+## Building
+
+To build this package you will need at least `go` version 1.15.
+
+To build `oaitool`:
+
+- Clone this repository
+- Run `make`
+
 ## Authentication
 
 You'll need to acquire an offline token from
@@ -23,16 +32,24 @@ offline-token: "...token goes here..."
 Commands for interacting with clusters
 
 Usage:
-  oai cluster [command]
+  oaitool cluster [command]
 
 Available Commands:
-  delete      Delete the specified cluster
-  install     Manage cluster install
-  list        List available clusters
-  show        Show details for a single cluster
+  create          Create an assisted installer cluster
+  delete          Delete the specified cluster
+  get-file        Get file from cluster
+  get-image-url   Get discovery image download url
+  get-kubeconfig  Get cluster kubeconfig
+  install         Manage cluster install
+  list            List available clusters
+  set-vips        Create an assisted installer cluster
+  show            Show details for a single cluster
+  status          Get cluster status
+  wait-for-status Wait until cluster reaches the named status
 
 Flags:
-  -h, --help   help for cluster
+      --cluster string   cluster id or name
+  -h, --help             help for cluster
 
 Global Flags:
   -u, --api-url string         set logging verbosity (default "https://api.openshift.com/api/assisted-install/v1")
@@ -40,7 +57,7 @@ Global Flags:
   -t, --offline-token string   offline api token
   -v, --verbose count          set logging verbosity
 
-Use "oai cluster [command] --help" for more information about a command.
+Use "oaitool cluster [command] --help" for more information about a command.
 ```
 
 ### Host commands
@@ -49,17 +66,18 @@ Use "oai cluster [command] --help" for more information about a command.
 Commands for interacting with hosts in a cluster
 
 Usage:
-  oai host [command]
+  oaitool host [command]
 
 Available Commands:
-  delete      Delete hosts from cluster
-  find        Find hosts matching criteria
-  list        List hosts in the given cluster
-  set-name    Set cluster hostnames
-  show        Show details for a single host
+  delete          Delete hosts from cluster
+  find            Find hosts matching criteria
+  list            List hosts in the given cluster
+  set-name        Set cluster hostnames
+  show            Show details for a single host
+  wait-for-status Wait until hosts in cluster reach the named status
 
 Flags:
-  -c, --cluster string   cluster id or name
+      --cluster string   cluster id or name
   -h, --help             help for host
 
 Global Flags:
@@ -68,5 +86,5 @@ Global Flags:
   -t, --offline-token string   offline api token
   -v, --verbose count          set logging verbosity
 
-Use "oai host [command] --help" for more information about a command.
+Use "oaitool host [command] --help" for more information about a command.
 ```
