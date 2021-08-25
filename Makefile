@@ -1,16 +1,9 @@
 PKG=github.com/larsks/oaitool
 
-GOSRC =  \
-	 api/main.go \
-	 api/host.go \
-	 api/pullsecret.go \
-	 api/datatypes.go \
-	 api/cluster.go \
-	 cli/host.go \
-	 cli/main.go \
-	 cli/cluster.go \
-	 version/main.go \
-	 main.go
+GOSRC =  main.go \
+	 $(wildcard api/*.go) \
+	 $(wildcard cli/*.go) \
+	 $(wildcard version/*.go)
 
 VERSION = $(shell git describe --tags --exact-match 2> /dev/null || echo unknown)
 COMMIT = $(shell git rev-parse --short=10 HEAD)
