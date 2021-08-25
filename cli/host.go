@@ -436,9 +436,6 @@ func NewCmdHost(ctx *Context) *cobra.Command {
 	}
 
 	cmd.PersistentFlags().String("cluster", "", "cluster id or name")
-	if err := cmd.MarkFlagRequired("cluster"); err != nil {
-		panic(err)
-	}
 
 	cmd.AddCommand(
 		NewCmdHostList(ctx),

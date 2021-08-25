@@ -1,5 +1,9 @@
 on:
   push:
+    paths:
+      - '**'
+      - '!changelog/config.env'
+
   pull_request:
 
 jobs:
