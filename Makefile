@@ -1,4 +1,5 @@
 PKG=github.com/larsks/oaitool
+EXE=oaitool-$(shell go env GOOS)-$(shell go env GOARCH)
 
 GOSRC =  main.go \
 	 $(wildcard api/*.go) \
@@ -14,9 +15,9 @@ GOLDFLAGS = \
 	    -X '$(PKG)/version.BuildRef=$(COMMIT)' \
 	    -X '$(PKG)/version.BuildDate=$(DATE)'
 
-all: oaitool
+all: $(EXE)
 
-oaitool: $(GOSRC)
+$(EXE): $(GOSRC)
 	go build -o $@ -ldflags "$(GOLDFLAGS)"
 
 clean:
