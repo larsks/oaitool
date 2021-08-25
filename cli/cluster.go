@@ -12,20 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func getClusterFromArgs(ctx *Context, args []string) (*api.Cluster, error) {
-	if len(args) < 1 || args[0] == "" {
-		return nil, fmt.Errorf("missing cluster name")
-	}
-	clusterid := args[0]
-
-	cluster, err := ctx.api.FindCluster(clusterid)
-	if err != nil {
-		return nil, err
-	}
-
-	return cluster, nil
-}
-
 func NewCmdClusterList(ctx *Context) *cobra.Command {
 	cmd := cobra.Command{
 		Use:           "list",
@@ -186,7 +172,7 @@ func NewCmdClusterSetVips(ctx *Context) *cobra.Command {
 				VipDhcpAllocation: false,
 			}
 			log.Debugf("patching cluster network configuration: %+v", networkPatch)
-			cluster, err = ctx.api.PatchCluster(cluster.ID, &networkPatch)
+			_, err = ctx.api.PatchCluster(cluster.ID, &networkPatch)
 			if err != nil {
 				return err
 			}
@@ -196,8 +182,12 @@ func NewCmdClusterSetVips(ctx *Context) *cobra.Command {
 
 	cmd.Flags().String("api-vip", "", "API VIP")
 	cmd.Flags().String("ingress-vip", "", "Ingress VIP")
-	cmd.MarkFlagRequired("api-vip")
-	cmd.MarkFlagRequired("ingress-vip")
+	if err := cmd.MarkFlagRequired("api-vip"); err != nil {
+		panic(err)
+	}
+	if err := cmd.MarkFlagRequired("ingress-vip"); err != nil {
+		panic(err)
+	}
 
 	return &cmd
 }
@@ -235,13 +225,11 @@ func NewCmdClusterInstall(ctx *Context) *cobra.Command {
 					log.Infof("starting install of cluster %s (%s)", cluster.Name, cluster.ID)
 					err = ctx.api.ResetCluster(cluster.ID)
 					action = true
-				default:
-					err = fmt.Errorf("invalid command: %s", mode)
 				}
-			}
 
-			if err != nil {
-				return err
+				if err != nil {
+					return err
+				}
 			}
 
 			if !action {

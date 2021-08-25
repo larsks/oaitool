@@ -113,6 +113,9 @@ func (client *ApiClient) ListClusters() (ClusterList, error) {
 		fmt.Sprintf("%s/clusters", client.ApiUrl),
 		nil,
 	)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := client.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -176,6 +179,9 @@ func (client *ApiClient) GetCluster(clusterid string) (*Cluster, error) {
 		fmt.Sprintf("%s/clusters/%s", client.ApiUrl, clusterid),
 		nil,
 	)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := client.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -209,6 +215,9 @@ func (client *ApiClient) InstallCluster(clusterid string) error {
 		fmt.Sprintf("%s/clusters/%s/actions/install", client.ApiUrl, clusterid),
 		nil,
 	)
+	if err != nil {
+		return err
+	}
 	resp, err := client.client.Do(req)
 	if err != nil {
 		return err
@@ -235,6 +244,9 @@ func (client *ApiClient) CancelCluster(clusterid string) error {
 		fmt.Sprintf("%s/clusters/%s/actions/cancel", client.ApiUrl, clusterid),
 		nil,
 	)
+	if err != nil {
+		return err
+	}
 	resp, err := client.client.Do(req)
 	if err != nil {
 		return err
@@ -261,6 +273,9 @@ func (client *ApiClient) ResetCluster(clusterid string) error {
 		fmt.Sprintf("%s/clusters/%s/actions/reset", client.ApiUrl, clusterid),
 		nil,
 	)
+	if err != nil {
+		return err
+	}
 	resp, err := client.client.Do(req)
 	if err != nil {
 		return err
@@ -287,6 +302,9 @@ func (client *ApiClient) DeleteCluster(clusterid string) error {
 		fmt.Sprintf("%s/clusters/%s", client.ApiUrl, clusterid),
 		nil,
 	)
+	if err != nil {
+		return err
+	}
 	resp, err := client.client.Do(req)
 	if err != nil {
 		return err
@@ -313,6 +331,9 @@ func (client *ApiClient) GetKubeconfig(clusterid string) ([]byte, error) {
 		fmt.Sprintf("%s/clusters/%s/downloads/kubeconfig", client.ApiUrl, clusterid),
 		nil,
 	)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := client.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -343,6 +364,9 @@ func (client *ApiClient) GetFile(clusterid, filename string) ([]byte, error) {
 			client.ApiUrl, clusterid, filename),
 		nil,
 	)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := client.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -376,6 +400,9 @@ func (client *ApiClient) GetPullSecret() (*PullSecret, error) {
 		accessTokenUrl,
 		nil,
 	)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := client.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -423,6 +450,9 @@ func (client *ApiClient) CreateDiscoveryImage(
 			clusterid),
 		bytes.NewBuffer(createParamsJson),
 	)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := client.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -461,6 +491,9 @@ func (client *ApiClient) CreateCluster(cluster *ClusterCreateParams) (*Cluster, 
 		fmt.Sprintf("%s/clusters", client.ApiUrl),
 		bytes.NewBuffer(createParamsJson),
 	)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := client.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -501,6 +534,9 @@ func (client *ApiClient) PatchCluster(clusterid string, patch JsonObject) (*Clus
 		fmt.Sprintf("%s/clusters/%s", client.ApiUrl, clusterid),
 		bytes.NewBuffer(patchJson),
 	)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := client.client.Do(req)
 	if err != nil {
 		return nil, err

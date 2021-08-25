@@ -165,8 +165,12 @@ func NewCmdRoot() *cobra.Command {
 	cmd.PersistentFlags().CountP("verbose", "v", "set logging verbosity")
 	cmd.PersistentFlags().StringP("api-url", "u", "https://api.openshift.com/api/assisted-install/v1", "set logging verbosity")
 
-	viper.BindPFlag("offline-token", cmd.PersistentFlags().Lookup("offline-token"))
-	viper.BindPFlag("api-url", cmd.PersistentFlags().Lookup("api-url"))
+	if err := viper.BindPFlag("offline-token", cmd.PersistentFlags().Lookup("offline-token")); err != nil {
+		panic(err)
+	}
+	if err := viper.BindPFlag("api-url", cmd.PersistentFlags().Lookup("api-url")); err != nil {
+		panic(err)
+	}
 
 	cmd.AddCommand(
 		NewCmdCluster(ctx),

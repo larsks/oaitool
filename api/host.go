@@ -23,6 +23,9 @@ func (client *ApiClient) DeleteHost(clusterid string, hostid string) error {
 		fmt.Sprintf("%s/clusters/%s/hosts/%s", client.ApiUrl, clusterid, hostid),
 		nil,
 	)
+	if err != nil {
+		return err
+	}
 	resp, err := client.client.Do(req)
 	if err != nil {
 		return err
@@ -64,9 +67,7 @@ func (client *ApiClient) FindHost(clusterid string, hostid string) (*Host, error
 
 func (client *ApiClient) SetHostnames(clusterid string, hostnames []HostName) error {
 	var hnl HostNameList
-	for _, hostname := range hostnames {
-		hnl.HostNames = append(hnl.HostNames, hostname)
-	}
+	hnl.HostNames = hostnames
 
 	hnljson, err := json.Marshal(hnl)
 	if err != nil {
@@ -78,6 +79,9 @@ func (client *ApiClient) SetHostnames(clusterid string, hostnames []HostName) er
 		fmt.Sprintf("%s/clusters/%s", client.ApiUrl, clusterid),
 		bytes.NewReader(hnljson),
 	)
+	if err != nil {
+		return err
+	}
 	resp, err := client.client.Do(req)
 	if err != nil {
 		return err
@@ -107,6 +111,9 @@ func (client *ApiClient) GetHost(clusterid, hostid string) (*Host, error) {
 		fmt.Sprintf("%s/clusters/%s/hosts/%s", client.ApiUrl, clusterid, hostid),
 		nil,
 	)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := client.client.Do(req)
 	if err != nil {
 		return nil, err
